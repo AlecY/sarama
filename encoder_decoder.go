@@ -18,7 +18,7 @@ type encoderWithHeader interface {
 }
 
 // Encode takes an Encoder and turns it into bytes while potentially recording metrics.
-func encode(e encoder, metricRegistry metrics.Registry) ([]byte, error) {
+func encode(e encoder, metricRegistry metrics.Registry, raw []byte) ([]byte, error) {
 	if e == nil {
 		return nil, nil
 	}
@@ -35,7 +35,12 @@ func encode(e encoder, metricRegistry metrics.Registry) ([]byte, error) {
 		return nil, PacketEncodingError{fmt.Sprintf("invalid request size (%d)", prepEnc.length)}
 	}
 
-	realEnc.raw = make([]byte, prepEnc.length)
+	if len(raw) < prepEnc.length {
+		for i := len(raw); i < prepEnc.length; i++ {
+			raw = append(raw, 0)
+		}
+	}
+	realEnc.raw = raw //make([]byte, prepEnc.length)
 	realEnc.registry = metricRegistry
 	err = e.encode(&realEnc)
 	if err != nil {

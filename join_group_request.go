@@ -113,6 +113,9 @@ func (r *JoinGroupRequest) decode(pd packetDecoder, version int16) (err error) {
 		return nil
 	}
 
+	for _, buf := range r.GroupProtocols {
+		bufferBytePool.Put(buf[:0])
+	}
 	r.GroupProtocols = make(map[string][]byte)
 	for i := 0; i < n; i++ {
 		protocol := &GroupProtocol{}
@@ -157,7 +160,8 @@ func (r *JoinGroupRequest) AddGroupProtocol(name string, metadata []byte) {
 }
 
 func (r *JoinGroupRequest) AddGroupProtocolMetadata(name string, metadata *ConsumerGroupMemberMetadata) error {
-	bin, err := encode(metadata, nil)
+	bin := bufferBytePool.Get().([]byte)
+	bin, err := encode(metadata, nil, bin)
 	if err != nil {
 		return err
 	}

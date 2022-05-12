@@ -2053,7 +2053,7 @@ func Test_stickyBalanceStrategy_Plan_AssignmentData(t *testing.T) {
 
 	expected := encodeSubscriberPlanWithGeneration(t, map[string][]int32{"topic1": {0, 1}}, 1)
 
-	actual, err := s.AssignmentData("consumer1", map[string][]int32{"topic1": {0, 1}}, 1)
+	actual, err := s.AssignmentData("consumer1", map[string][]int32{"topic1": {0, 1}}, 1, nil)
 	if err != nil {
 		t.Errorf("Error building assignment data: %v", err)
 	}
@@ -2257,7 +2257,7 @@ func encodeSubscriberPlanWithGeneration(t *testing.T, assignments map[string][]i
 	userDataBytes, err := encode(&StickyAssignorUserDataV1{
 		Topics:     assignments,
 		Generation: generation,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Errorf("encodeSubscriberPlan error = %v", err)
 		t.FailNow()
@@ -2269,7 +2269,7 @@ func encodeSubscriberPlanWithGenerationForBenchmark(b *testing.B, assignments ma
 	userDataBytes, err := encode(&StickyAssignorUserDataV1{
 		Topics:     assignments,
 		Generation: generation,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		b.Errorf("encodeSubscriberPlan error = %v", err)
 		b.FailNow()
@@ -2280,7 +2280,7 @@ func encodeSubscriberPlanWithGenerationForBenchmark(b *testing.B, assignments ma
 func encodeSubscriberPlanWithOldSchema(t *testing.T, assignments map[string][]int32) []byte {
 	userDataBytes, err := encode(&StickyAssignorUserDataV0{
 		Topics: assignments,
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Errorf("encodeSubscriberPlan error = %v", err)
 		t.FailNow()

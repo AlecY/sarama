@@ -196,14 +196,19 @@ func (b *RecordBatch) decode(pd packetDecoder) (err error) {
 }
 
 func (b *RecordBatch) encodeRecords(pe packetEncoder) error {
-	var raw []byte
+	raw := bufferBytePool.Get().([]byte)
 	var err error
-	if raw, err = encode(recordsArray(b.Records), pe.metricRegistry()); err != nil {
+	if raw, err = encode(recordsArray(b.Records), pe.metricRegistry(), raw); err != nil {
 		return err
 	}
 	b.recordsLen = len(raw)
+	compressBytes := make([]byte, len(raw))
+	for i, b := range raw {
+		compressBytes[i] = b
+	}
+	bufferBytePool.Put(raw[:0]) //Flag: Alec 2
 
-	b.compressedRecords, err = compress(b.Codec, b.CompressionLevel, raw)
+	b.compressedRecords, err = compress(b.Codec, b.CompressionLevel, compressBytes)
 	return err
 }
 

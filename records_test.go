@@ -18,11 +18,11 @@ func TestLegacyRecords(t *testing.T) {
 	}
 	r := newLegacyRecords(set)
 
-	exp, err := encode(set, nil)
+	exp, err := encode(set, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	buf, err := encode(&r, nil)
+	buf, err := encode(&r, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,11 +95,11 @@ func TestDefaultRecords(t *testing.T) {
 
 	r := newDefaultRecords(batch)
 
-	exp, err := encode(batch, nil)
+	exp, err := encode(batch, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	buf, err := encode(&r, nil)
+	buf, err := encode(&r, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

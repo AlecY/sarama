@@ -51,7 +51,7 @@ func TestConsumerGroupMemberMetadata(t *testing.T) {
 		UserData: []byte{0x01, 0x02, 0x03},
 	}
 
-	buf, err := encode(meta, nil)
+	buf, err := encode(meta, nil, nil)
 	if err != nil {
 		t.Error("Failed to encode data", err)
 	} else if !bytes.Equal(groupMemberMetadataV0, buf) {
@@ -86,7 +86,7 @@ func TestConsumerGroupMemberAssignment(t *testing.T) {
 		UserData: []byte{0x01, 0x02, 0x03},
 	}
 
-	buf, err := encode(amt, nil)
+	buf, err := encode(amt, nil, nil)
 	if err != nil {
 		t.Error("Failed to encode data", err)
 	} else if !bytes.Equal(groupMemberAssignmentV0, buf) {

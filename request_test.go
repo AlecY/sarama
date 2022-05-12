@@ -12,7 +12,7 @@ import (
 // implement the encoder or decoder interfaces that needed somewhere to live
 
 func testEncodable(t *testing.T, name string, in encoder, expect []byte) {
-	packet, err := encode(in, nil)
+	packet, err := encode(in, nil, nil)
 	if err != nil {
 		t.Error(err)
 	} else if !bytes.Equal(packet, expect) {
@@ -52,7 +52,7 @@ func testRequestWithoutByteComparison(t *testing.T, name string, rb protocolBody
 
 func testRequestEncode(t *testing.T, name string, rb protocolBody, expected []byte) []byte {
 	req := &request{correlationID: 123, clientID: "foo", body: rb}
-	packet, err := encode(req, nil)
+	packet, err := encode(req, nil, nil)
 
 	headerSize := 0
 
@@ -89,7 +89,7 @@ func testRequestDecode(t *testing.T, name string, rb protocolBody, packet []byte
 }
 
 func testResponse(t *testing.T, name string, res protocolBody, expected []byte) {
-	encoded, err := encode(res, nil)
+	encoded, err := encode(res, nil, nil)
 	if err != nil {
 		t.Error(err)
 	} else if expected != nil && !bytes.Equal(encoded, expected) {

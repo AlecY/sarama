@@ -1,4 +1,4 @@
-default: fmt get update test lint
+mdefault: fmt get update test lint
 
 GO       := go
 GOBUILD  := CGO_ENABLED=0 $(GO) build $(BUILD_FLAG)

@@ -937,7 +937,8 @@ func (b *Broker) sendWithPromise(rb protocolBody, promise *responsePromise) erro
 	}
 
 	req := &request{correlationID: b.correlationID, clientID: b.conf.ClientID, body: rb}
-	buf, err := encode(req, b.conf.MetricRegistry)
+	buf := bufferBytePool.Get().([]byte)
+	buf, err := encode(req, b.conf.MetricRegistry, buf)
 	if err != nil {
 		return err
 	}
@@ -946,6 +947,7 @@ func (b *Broker) sendWithPromise(rb protocolBody, promise *responsePromise) erro
 	// Will be decremented in responseReceiver (except error or request with NoResponse)
 	b.addRequestInFlightMetrics(1)
 	bytes, err := b.write(buf)
+	bufferBytePool.Put(buf[:0])
 	b.updateOutgoingCommunicationMetrics(bytes)
 	if err != nil {
 		b.addRequestInFlightMetrics(-1)
@@ -1139,7 +1141,8 @@ func (b *Broker) sendAndReceiveSASLHandshake(saslType SASLMechanism, version int
 	rb := &SaslHandshakeRequest{Mechanism: string(saslType), Version: version}
 
 	req := &request{correlationID: b.correlationID, clientID: b.conf.ClientID, body: rb}
-	buf, err := encode(req, b.conf.MetricRegistry)
+	buf := bufferBytePool.Get().([]byte)
+	buf, err := encode(req, b.conf.MetricRegistry, buf)
 	if err != nil {
 		return err
 	}
@@ -1148,6 +1151,7 @@ func (b *Broker) sendAndReceiveSASLHandshake(saslType SASLMechanism, version int
 	// Will be decremented in updateIncomingCommunicationMetrics (except error)
 	b.addRequestInFlightMetrics(1)
 	bytes, err := b.write(buf)
+	bufferBytePool.Put(buf[:0])
 	b.updateOutgoingCommunicationMetrics(bytes)
 	if err != nil {
 		b.addRequestInFlightMetrics(-1)
@@ -1480,12 +1484,15 @@ func (b *Broker) sendAndReceiveSASLSCRAMv1() error {
 func (b *Broker) sendSaslAuthenticateRequest(correlationID int32, msg []byte) (int, error) {
 	rb := b.createSaslAuthenticateRequest(msg)
 	req := &request{correlationID: correlationID, clientID: b.conf.ClientID, body: rb}
-	buf, err := encode(req, b.conf.MetricRegistry)
+	buf := bufferBytePool.Get().([]byte)
+	buf, err := encode(req, b.conf.MetricRegistry, buf)
 	if err != nil {
 		return 0, err
 	}
 
-	return b.write(buf)
+	res, err := b.write(buf)
+	bufferBytePool.Put(buf[:0])
+	return res, err
 }
 
 func (b *Broker) createSaslAuthenticateRequest(msg []byte) *SaslAuthenticateRequest {
@@ -1565,12 +1572,14 @@ func (b *Broker) sendSASLPlainAuthClientResponse(correlationID int32) (int, int1
 	authBytes := []byte(b.conf.Net.SASL.AuthIdentity + "\x00" + b.conf.Net.SASL.User + "\x00" + b.conf.Net.SASL.Password)
 	rb := b.createSaslAuthenticateRequest(authBytes)
 	req := &request{correlationID: correlationID, clientID: b.conf.ClientID, body: rb}
-	buf, err := encode(req, b.conf.MetricRegistry)
+	buf := bufferBytePool.Get().([]byte)
+	buf, err := encode(req, b.conf.MetricRegistry, buf)
 	if err != nil {
 		return 0, rb.Version, err
 	}
 
 	write, err := b.write(buf)
+	bufferBytePool.Put(buf[:0])
 	return write, rb.Version, err
 }
 
@@ -1579,12 +1588,14 @@ func (b *Broker) sendSASLOAuthBearerClientMessage(initialResp []byte, correlatio
 
 	req := &request{correlationID: correlationID, clientID: b.conf.ClientID, body: rb}
 
-	buf, err := encode(req, b.conf.MetricRegistry)
+	buf := bufferBytePool.Get().([]byte)
+	buf, err := encode(req, b.conf.MetricRegistry, buf)
 	if err != nil {
 		return 0, rb.version(), err
 	}
 
 	write, err := b.write(buf)
+	bufferBytePool.Put(buf[:0])
 	return write, rb.version(), err
 }
 

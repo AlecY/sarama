@@ -268,11 +268,11 @@ func (s *stickyBalanceStrategy) Plan(members map[string]ConsumerGroupMemberMetad
 
 // AssignmentData serializes the set of topics currently assigned to the
 // specified member as part of the supplied balance plan
-func (s *stickyBalanceStrategy) AssignmentData(memberID string, topics map[string][]int32, generationID int32) ([]byte, error) {
+func (s *stickyBalanceStrategy) AssignmentData(memberID string, topics map[string][]int32, generationID int32, raw []byte) ([]byte, error) {
 	return encode(&StickyAssignorUserDataV1{
 		Topics:     topics,
 		Generation: generationID,
-	}, nil)
+	}, nil, raw)
 }
 
 func strsContains(s []string, value string) bool {

@@ -271,6 +271,10 @@ func (pc *PartitionConsumer) AsyncClose() {
 	})
 }
 
+// AsyncClose implements the AsyncClose method from the sarama.PartitionConsumer interface.
+func (pc *PartitionConsumer) ReturnMessage(cm *sarama.ConsumerMessage) {
+}
+
 // Close implements the Close method from the sarama.PartitionConsumer interface. It will
 // verify whether the partition consumer was actually started.
 func (pc *PartitionConsumer) Close() error {

@@ -1,11 +1,17 @@
 package sarama
 
+import "sync"
+
 type SyncGroupRequest struct {
 	GroupId          string
 	GenerationId     int32
 	MemberId         string
 	GroupAssignments map[string][]byte
 }
+
+var bufferBytePool = sync.Pool{New: func() interface{} {
+	return make([]byte, 0)
+}}
 
 func (r *SyncGroupRequest) encode(pe packetEncoder) error {
 	if err := pe.putString(r.GroupId); err != nil {
@@ -52,6 +58,9 @@ func (r *SyncGroupRequest) decode(pd packetDecoder, version int16) (err error) {
 		return nil
 	}
 
+	for _, buf := range r.GroupAssignments {
+		bufferBytePool.Put(buf[:0])
+	}
 	r.GroupAssignments = make(map[string][]byte)
 	for i := 0; i < n; i++ {
 		memberId, err := pd.getString()
@@ -94,7 +103,8 @@ func (r *SyncGroupRequest) AddGroupAssignment(memberId string, memberAssignment 
 }
 
 func (r *SyncGroupRequest) AddGroupAssignmentMember(memberId string, memberAssignment *ConsumerGroupMemberAssignment) error {
-	bin, err := encode(memberAssignment, nil)
+	bin := bufferBytePool.Get().([]byte)
+	bin, err := encode(memberAssignment, nil, bin)
 	if err != nil {
 		return err
 	}

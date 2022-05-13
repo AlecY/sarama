@@ -583,7 +583,7 @@ func (child *partitionConsumer) responseFeeder() {
 
 feederLoop:
 	for response := range child.feeder {
-		msgs, child.responseResult = child.parseResponse(response)
+		msgs, child.responseResult = child.parseResponse(response, msgs[:0])
 
 		if child.responseResult == nil {
 			atomic.StoreInt32(&child.retries, 0)
@@ -596,7 +596,6 @@ feederLoop:
 			case <-child.dying:
 				child.broker.acks.Done()
 				child.cmPool.Put(msg)
-				cmSlicePool.Put(msgs)
 				continue feederLoop
 			case child.messages <- msg:
 				firstAttempt = true
@@ -615,7 +614,6 @@ feederLoop:
 						}
 					}
 					child.broker.input <- child
-					cmSlicePool.Put(msgs)
 					continue feederLoop
 				} else {
 					// current message has not been sent, return to select
@@ -627,7 +625,6 @@ feederLoop:
 		}
 
 		child.broker.acks.Done()
-		cmSlicePool.Put(msgs[:0])
 	}
 
 	expiryTicker.Stop()
@@ -703,7 +700,7 @@ func (child *partitionConsumer) parseRecords(batch *RecordBatch) ([]*ConsumerMes
 	return messages, nil
 }
 
-func (child *partitionConsumer) parseResponse(response *FetchResponse) ([]*ConsumerMessage, error) {
+func (child *partitionConsumer) parseResponse(response *FetchResponse, messages []*ConsumerMessage) ([]*ConsumerMessage, error) {
 	var (
 		metricRegistry          = child.conf.MetricRegistry
 		consumerBatchSizeMetric metrics.Histogram
@@ -781,8 +778,6 @@ func (child *partitionConsumer) parseResponse(response *FetchResponse) ([]*Consu
 	// - producerID are removed when partitionConsumer iterate over an aborted controlRecord, meaning the aborted transaction for this producer is over
 	abortedProducerIDs := make(map[int64]struct{}, len(block.AbortedTransactions))
 	abortedTransactions := block.getAbortedTransactions()
-
-	messages := cmSlicePool.Get().([]*ConsumerMessage)
 	for _, records := range block.RecordsSet {
 		switch records.recordsType {
 		case legacyRecords:

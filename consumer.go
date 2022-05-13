@@ -146,7 +146,7 @@ func newConsumer(client Client) (Consumer, error) {
 }
 
 var cmSlicePool = sync.Pool{New: func() interface{} {
-	return make([]*ConsumerMessage, 0)
+	return make([]*ConsumerMessage, 0, 100)
 }}
 
 func (c *consumer) Close() error {

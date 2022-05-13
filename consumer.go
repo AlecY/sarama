@@ -106,7 +106,6 @@ type consumer struct {
 	client          Client
 	lock            sync.Mutex
 	cmPool          sync.Pool
-	cmSlicePool     sync.Pool
 }
 
 // NewConsumer creates a new consumer using the given broker addresses and configuration.
@@ -141,13 +140,14 @@ func newConsumer(client Client) (Consumer, error) {
 		cmPool: sync.Pool{New: func() interface{} {
 			return new(ConsumerMessage)
 		}},
-		cmSlicePool: sync.Pool{New: func() interface{} {
-			return make([]*ConsumerMessage, 0)
-		}},
 	}
 
 	return c, nil
 }
+
+var cmSlicePool = sync.Pool{New: func() interface{} {
+	return make([]*ConsumerMessage, 0)
+}}
 
 func (c *consumer) Close() error {
 	return c.client.Close()
@@ -175,7 +175,6 @@ func (c *consumer) ConsumePartition(topic string, partition int32, offset int64)
 		dying:                make(chan none),
 		fetchSize:            c.conf.Consumer.Fetch.Default,
 		cmPool:               &c.cmPool,
-		cmSlicePool:          &c.cmSlicePool,
 	}
 
 	if err := child.chooseStartingOffset(offset); err != nil {
@@ -424,7 +423,6 @@ type partitionConsumer struct {
 	offset         int64
 	retries        int32
 	cmPool         *sync.Pool
-	cmSlicePool    *sync.Pool
 
 	paused int32
 }
@@ -598,7 +596,7 @@ feederLoop:
 			case <-child.dying:
 				child.broker.acks.Done()
 				child.cmPool.Put(msg)
-				child.cmSlicePool.Put(msgs)
+				cmSlicePool.Put(msgs)
 				continue feederLoop
 			case child.messages <- msg:
 				firstAttempt = true
@@ -617,7 +615,7 @@ feederLoop:
 						}
 					}
 					child.broker.input <- child
-					child.cmSlicePool.Put(msgs)
+					cmSlicePool.Put(msgs)
 					continue feederLoop
 				} else {
 					// current message has not been sent, return to select
@@ -629,7 +627,7 @@ feederLoop:
 		}
 
 		child.broker.acks.Done()
-		child.cmSlicePool.Put(msgs[:0])
+		cmSlicePool.Put(msgs[:0])
 	}
 
 	expiryTicker.Stop()
@@ -672,7 +670,7 @@ func (child *partitionConsumer) parseMessages(msgSet *MessageSet) ([]*ConsumerMe
 }
 
 func (child *partitionConsumer) parseRecords(batch *RecordBatch) ([]*ConsumerMessage, error) {
-	messages := child.cmSlicePool.Get().([]*ConsumerMessage)
+	messages := cmSlicePool.Get().([]*ConsumerMessage)
 	if cap(messages) < len(batch.Records) {
 		messages = make([]*ConsumerMessage, 0, len(batch.Records))
 	}
@@ -784,7 +782,7 @@ func (child *partitionConsumer) parseResponse(response *FetchResponse) ([]*Consu
 	abortedProducerIDs := make(map[int64]struct{}, len(block.AbortedTransactions))
 	abortedTransactions := block.getAbortedTransactions()
 
-	messages := child.cmSlicePool.Get().([]*ConsumerMessage)
+	messages := cmSlicePool.Get().([]*ConsumerMessage)
 	for _, records := range block.RecordsSet {
 		switch records.recordsType {
 		case legacyRecords:
@@ -853,7 +851,7 @@ func (child *partitionConsumer) parseResponse(response *FetchResponse) ([]*Consu
 			}
 
 			messages = append(messages, recordBatchMessages...)
-			child.cmSlicePool.Put(recordBatchMessages)
+			cmSlicePool.Put(recordBatchMessages)
 		default:
 			child.freeMessageList(messages)
 			return nil, fmt.Errorf("unknown records type: %v", records.recordsType)
@@ -885,7 +883,7 @@ func (child *partitionConsumer) freeMessageList(msgs []*ConsumerMessage) {
 	for _, msg := range msgs {
 		child.cmPool.Put(msg)
 	}
-	child.cmSlicePool.Put(msgs[:0])
+	cmSlicePool.Put(msgs[:0])
 }
 
 func (child *partitionConsumer) interceptors(msg *ConsumerMessage) {

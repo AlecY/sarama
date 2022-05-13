@@ -807,6 +807,8 @@ func (child *partitionConsumer) parseResponse(response *FetchResponse) ([]*Consu
 
 			recordBatchMessages, err := child.parseRecords(records.RecordBatch)
 			if err != nil {
+				child.freeMessageList(recordBatchMessages)
+				releaseBlock(block)
 				return nil, err
 			}
 
@@ -829,6 +831,8 @@ func (child *partitionConsumer) parseResponse(response *FetchResponse) ([]*Consu
 			if isControl {
 				controlRecord, err := records.getControlRecord()
 				if err != nil {
+					child.freeMessageList(recordBatchMessages)
+					releaseBlock(block)
 					return nil, err
 				}
 
@@ -851,11 +855,30 @@ func (child *partitionConsumer) parseResponse(response *FetchResponse) ([]*Consu
 			messages = append(messages, recordBatchMessages...)
 			child.cmSlicePool.Put(recordBatchMessages)
 		default:
+			child.freeMessageList(messages)
 			return nil, fmt.Errorf("unknown records type: %v", records.recordsType)
 		}
 	}
+	releaseBlock(block)
 
 	return messages, nil
+}
+
+func releaseBlock(block *FetchResponseBlock) {
+	if block.RecordsSet == nil {
+		return
+	}
+	for _, records := range block.RecordsSet {
+		if records.RecordBatch != nil {
+			recordsArray(records.RecordBatch.Records).free()
+			*(records.RecordBatch) = RecordBatch{}
+			recordBatchPool.Put(records.RecordBatch)
+		}
+		*records = Records{}
+		recordsPool.Put(records)
+	}
+	recordsListPool.Put(block.RecordsSet[:0])
+	block.RecordsSet = nil
 }
 
 func (child *partitionConsumer) freeMessageList(msgs []*ConsumerMessage) {

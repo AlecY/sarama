@@ -123,6 +123,10 @@ func (m *Message) encode(pe packetEncoder) error {
 	return pe.pop()
 }
 
+func (m *Message) free() {
+
+}
+
 func (m *Message) decode(pd packetDecoder) (err error) {
 	crc32Decoder := acquireCrc32Field(crcIEEE)
 	defer releaseCrc32Field(crc32Decoder)

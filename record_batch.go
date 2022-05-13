@@ -3,12 +3,19 @@ package sarama
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 )
 
 const recordBatchOverhead = 49
 
 type recordsArray []*Record
+
+var recordPool = sync.Pool{
+	New: func() interface{} {
+		return new(Record)
+	},
+}
 
 func (e recordsArray) encode(pe packetEncoder) error {
 	for _, r := range e {
@@ -18,10 +25,20 @@ func (e recordsArray) encode(pe packetEncoder) error {
 	}
 	return nil
 }
-
+func (e recordsArray) free() {
+	for _, rec := range e {
+		rec.Headers = rec.Headers[:0]
+		rec.Attributes = 0
+		rec.TimestampDelta = 0
+		rec.OffsetDelta = 0
+		rec.Key = rec.Key[:0]
+		rec.length = varintLengthField{}
+		recordPool.Put(rec)
+	}
+}
 func (e recordsArray) decode(pd packetDecoder) error {
 	for i := range e {
-		rec := &Record{}
+		rec := recordPool.Get().(*Record)
 		if err := rec.decode(pd); err != nil {
 			return err
 		}
@@ -54,6 +71,10 @@ type RecordBatch struct {
 
 func (b *RecordBatch) LastOffset() int64 {
 	return b.FirstOffset + int64(b.LastOffsetDelta)
+}
+
+func (b *RecordBatch) free() {
+
 }
 
 func (b *RecordBatch) encode(pe packetEncoder) error {

@@ -33,7 +33,9 @@ func (m *StickyAssignorUserDataV0) encode(pe packetEncoder) error {
 	}
 	return nil
 }
+func (m *StickyAssignorUserDataV0) free() {
 
+}
 func (m *StickyAssignorUserDataV0) decode(pd packetDecoder) (err error) {
 	var topicLen int
 	if topicLen, err = pd.getArrayLength(); err != nil {
@@ -64,6 +66,10 @@ type StickyAssignorUserDataV1 struct {
 	Generation int32
 
 	topicPartitions []topicPartitionAssignment
+}
+
+func (m *StickyAssignorUserDataV1) free() {
+
 }
 
 func (m *StickyAssignorUserDataV1) encode(pe packetEncoder) error {

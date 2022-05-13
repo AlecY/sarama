@@ -11,6 +11,10 @@ type ConsumerGroupMemberMetadata struct {
 	OwnedPartitions []*OwnedPartition
 }
 
+func (m *ConsumerGroupMemberMetadata) free() {
+
+}
+
 func (m *ConsumerGroupMemberMetadata) encode(pe packetEncoder) error {
 	pe.putInt16(m.Version)
 
@@ -85,6 +89,10 @@ type ConsumerGroupMemberAssignment struct {
 	Version  int16
 	Topics   map[string][]int32
 	UserData []byte
+}
+
+func (m *ConsumerGroupMemberAssignment) free() {
+
 }
 
 func (m *ConsumerGroupMemberAssignment) encode(pe packetEncoder) error {

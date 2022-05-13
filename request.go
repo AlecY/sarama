@@ -46,7 +46,9 @@ func (r *request) encode(pe packetEncoder) error {
 
 	return pe.pop()
 }
+func (r *request) free() {
 
+}
 func (r *request) decode(pd packetDecoder) (err error) {
 	key, err := pd.getInt16()
 	if err != nil {

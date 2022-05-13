@@ -3,6 +3,7 @@ package sarama
 import (
 	"errors"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -44,6 +45,14 @@ type FetchResponseBlock struct {
 	RecordsSet             []*Records
 	Partial                bool
 }
+
+var recordsListPool = sync.Pool{New: func() interface{} {
+	return make([]*Records, 0)
+}}
+
+var recordsPool = sync.Pool{New: func() interface{} {
+	return new(Records)
+}}
 
 func (b *FetchResponseBlock) decode(pd packetDecoder, version int16) (err error) {
 	tmp, err := pd.getInt16()
@@ -107,10 +116,10 @@ func (b *FetchResponseBlock) decode(pd packetDecoder, version int16) (err error)
 		return err
 	}
 
-	b.RecordsSet = []*Records{}
+	b.RecordsSet = recordsListPool.Get().([]*Records) //[]*Records{}
 
 	for recordsDecoder.remaining() > 0 {
-		records := &Records{}
+		records := recordsPool.Get().(*Records) //&Records{}
 		if err := records.decode(recordsDecoder); err != nil {
 			// If we have at least one decoded records, this is not an error
 			if errors.Is(err, ErrInsufficientData) {

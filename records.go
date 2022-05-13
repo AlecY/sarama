@@ -1,6 +1,9 @@
 package sarama
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 const (
 	unknownRecords = iota
@@ -79,6 +82,10 @@ func (r *Records) setTypeFromMagic(pd packetDecoder) error {
 	return nil
 }
 
+var recordBatchPool = sync.Pool{New: func() interface{} {
+	return new(RecordBatch)
+}}
+
 func (r *Records) decode(pd packetDecoder) error {
 	if r.recordsType == unknownRecords {
 		if err := r.setTypeFromMagic(pd); err != nil {
@@ -91,7 +98,7 @@ func (r *Records) decode(pd packetDecoder) error {
 		r.MsgSet = &MessageSet{}
 		return r.MsgSet.decode(pd)
 	case defaultRecords:
-		r.RecordBatch = &RecordBatch{}
+		r.RecordBatch = recordBatchPool.Get().(*RecordBatch)
 		return r.RecordBatch.decode(pd)
 	}
 	return fmt.Errorf("unknown records type: %v", r.recordsType)

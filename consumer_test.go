@@ -1881,7 +1881,7 @@ func Test_partitionConsumer_parseResponse(t *testing.T) {
 				},
 				conf: &Config{},
 			}
-			got, err := child.parseResponse(tt.args.response)
+			got, err := child.parseResponse(tt.args.response, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("partitionConsumer.parseResponse() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1913,7 +1913,7 @@ func Test_partitionConsumer_parseResponseEmptyBatch(t *testing.T) {
 		topic:     "my_topic",
 		partition: 0,
 	}
-	got, err := child.parseResponse(response)
+	got, err := child.parseResponse(response, nil)
 	if err != nil {
 		t.Errorf("partitionConsumer.parseResponse() error = %v", err)
 		return

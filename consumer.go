@@ -846,7 +846,7 @@ func (child *partitionConsumer) parseResponse(response *FetchResponse, messages 
 			}
 
 			messages = append(messages, recordBatchMessages...)
-			cmSlicePool.Put(recordBatchMessages)
+			cmSlicePool.Put(recordBatchMessages[:0])
 		default:
 			child.freeMessageList(messages)
 			return nil, fmt.Errorf("unknown records type: %v", records.recordsType)
